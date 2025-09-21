@@ -44,7 +44,7 @@ Make sure you have Node.js and npm installed on your machine.
 
 1.  **Clone the repo**
     ```sh
-    git clone [https://github.com/your-username/pokedex-pro.git](https://github.com/your-username/pokedex-pro.git)
+    git clone https://github.com/shaktisankpal/Pokedex.git
     ```
 2.  **Navigate to the project directory**
     ```sh
