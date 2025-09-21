@@ -65,7 +65,7 @@ Make sure you have Node.js and npm installed on your machine.
 ## 📁 Project Structure
 
 The project follows a standard Vite + React structure, with components organized for clarity.
-
+```
 pokedex-pro/
 ├── public/
 ├── src/
@@ -84,7 +84,7 @@ pokedex-pro/
 ├── README.md
 ├── tailwind.config.js
 └── vite.config.js
-
+```
 ---
 
 ## 📄 License
