@@ -1,12 +1,36 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import SearchBar from "./components/SearchBar";
 import PokemonCard from "./components/PokemonCard";
 import loaderGif from "./assets/loader.gif";
+// **NEW**: Import our utility function
+import { getClosestMatch } from "./utils/stringSimilarity";
 
 const App = () => {
   const [pokemon, setPokemon] = useState(null);
   const [loading, setLoading] = useState(false);
+  // **UPDATED**: Error state will now be an object
   const [error, setError] = useState(null);
+  // **NEW**: State to hold all Pokémon names
+  const [allPokemonNames, setAllPokemonNames] = useState([]);
+
+  // **NEW**: useEffect to fetch all Pokémon names on initial app load
+  useEffect(() => {
+    const fetchAllPokemonNames = async () => {
+      try {
+        // The PokéAPI has over 1300 Pokémon now, so we need a high limit.
+        const response = await fetch(
+          "https://pokeapi.co/api/v2/pokemon?limit=1302"
+        );
+        const data = await response.json();
+        // We only need the names, so we map the results to an array of strings
+        const names = data.results.map((p) => p.name);
+        setAllPokemonNames(names);
+      } catch (err) {
+        console.error("Failed to fetch Pokémon list:", err);
+      }
+    };
+    fetchAllPokemonNames();
+  }, []); // Empty array ensures this runs only once on mount
 
   const fetchPokemon = async (query) => {
     setLoading(true);
@@ -18,24 +42,25 @@ const App = () => {
         `https://pokeapi.co/api/v2/pokemon/${query}`
       );
       if (!response.ok) {
-        throw new Error("Pokémon not found!");
+        // Use a generic error for the throw, we'll handle suggestions in the catch block
+        throw new Error("Not found");
       }
       const data = await response.json();
-
       const speciesResponse = await fetch(data.species.url);
-      if (!speciesResponse.ok) {
-        throw new Error("Could not fetch Pokémon species details.");
-      }
       const speciesData = await speciesResponse.json();
-
-      const combinedData = {
-        ...data,
-        species: speciesData,
-      };
-
+      const combinedData = { ...data, species: speciesData };
       setPokemon(combinedData);
     } catch (err) {
-      setError(err.message);
+      // **UPDATED**: Error handling logic
+      const suggestion = getClosestMatch(query, allPokemonNames);
+      if (suggestion) {
+        setError({
+          message: `Pokémon not found. Did you mean`,
+          suggestion: suggestion,
+        });
+      } else {
+        setError({ message: "Pokémon not found!", suggestion: null });
+      }
     } finally {
       setLoading(false);
     }
@@ -62,21 +87,27 @@ const App = () => {
         <SearchBar onSearch={fetchPokemon} />
       </div>
 
-      {/* **THE FIX IS HERE**: 
-          We now wrap the entire <main> element in a condition.
-          It will only be rendered to the page if we are loading, have an error, or have a Pokémon to show.
-          This prevents an empty <main> block from pushing the search bar up.
-      */}
       {(loading || error || pokemon) && (
         <main className="w-full flex-grow flex items-center justify-center p-4">
           {loading && (
             <img src={loaderGif} alt="Loading..." className="w-24 h-24" />
           )}
+
+          {/* **UPDATED**: JSX for rendering the error and suggestion */}
           {error && (
-            <p className="text-red-400 text-2xl bg-red-900/50 p-4 rounded-lg">
-              {error}
-            </p>
+            <div className="text-center text-red-400 text-xl bg-red-900/50 p-6 rounded-lg">
+              <p className="font-semibold">{error.message}</p>
+              {error.suggestion && (
+                <button
+                  onClick={() => fetchPokemon(error.suggestion)}
+                  className="mt-2 text-2xl font-bold text-yellow-300 hover:text-yellow-400 capitalize transition-colors"
+                >
+                  {error.suggestion}?
+                </button>
+              )}
+            </div>
           )}
+
           {pokemon && <PokemonCard pokemon={pokemon} />}
         </main>
       )}
